@@ -191,3 +191,122 @@ If you use Browser Use in your research or project, please cite:
 <div align="center">
 Made with ❤️ in Zurich and San Francisco
  </div>
+
+# Browser RL Agent
+
+This project implements a reinforcement learning (RL) agent that learns to interact with web browsers using the Proximal Policy Optimization (PPO) algorithm. The agent is designed to optimize browser interactions by learning from experience and minimizing the number of steps required to complete tasks.
+
+## Features
+
+- **Gymnasium-Compatible Environment**: The browser environment follows the Gymnasium interface, making it easy to integrate with existing RL frameworks.
+- **PPO Implementation**: Uses PPO with action masking and LLM guidance for efficient learning.
+- **Action Space**: Supports various browser actions including navigation, clicking, typing, tab management, and more.
+- **State Space**: Rich observation space that includes URL, page title, step count, token usage, time elapsed, and task progress.
+- **Reward System**: Configurable reward function that considers action success, time penalties, and task completion.
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/browser-use.git
+cd browser-use
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+## Usage
+
+### Basic Example
+
+```python
+from rl_agent.env import BrowserEnv
+from rl_agent.model import PPOAgent
+
+# Create environment
+env = BrowserEnv(
+    max_steps=50,
+    reward_scale=1.0,
+    time_penalty=-0.01,
+    success_reward=1.0,
+    failure_penalty=-0.5
+)
+
+# Create agent
+state_dim = sum(
+    np.prod(space.shape)
+    for space in env.observation_space.values()
+    if hasattr(space, 'shape')
+)
+agent = PPOAgent(
+    state_dim=state_dim,
+    hidden_dim=256,
+    lr=3e-4
+)
+
+# Run training
+state = env.reset()[0]
+done = False
+
+while not done:
+    # Get valid actions
+    valid_actions = env.get_valid_actions()
+    
+    # Convert state to tensor
+    state_tensor = torch.cat([
+        torch.FloatTensor(state[key])
+        for key in ['step_count', 'tokens_used', 'time_elapsed', 'errors_encountered', 'task_progress']
+    ])
+    
+    # Select action
+    action, log_prob, value = agent.select_action(state_tensor, valid_actions)
+    
+    # Take step
+    next_state, reward, terminated, truncated, info = env.step(action)
+    done = terminated or truncated
+    state = next_state
+```
+
+### Training with W&B Logging
+
+```python
+from rl_agent.train import train
+
+env = BrowserEnv()
+agent = PPOAgent(state_dim=env.observation_space.shape[0])
+
+train(
+    env=env,
+    agent=agent,
+    num_episodes=1000,
+    max_steps_per_episode=100,
+    batch_size=64,
+    num_epochs=10,
+    clip_grad_norm=0.5,
+    wandb_project="browser-rl",
+    checkpoint_dir="checkpoints"
+)
+```
+
+## Project Structure
+
+- `rl_agent/`
+  - `model.py`: PPO agent implementation
+  - `env.py`: Browser environment implementation
+  - `action_mapping.py`: Action space and type definitions
+  - `train.py`: Training loop and utilities
+  - `example.py`: Example usage script
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

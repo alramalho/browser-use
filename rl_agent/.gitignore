@@ -1,0 +1,10 @@
+experiments/
+checkpoints/
+screenshots/
+wandb/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
